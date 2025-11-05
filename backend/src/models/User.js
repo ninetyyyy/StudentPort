@@ -11,36 +11,50 @@ const userSchema = new mongoose.Schema(
     password: {
       type: String,
       required: true,
-      // จะ hash ตอน register
     },
     displayName: {
       type: String,
       required: true,
     },
+
     role: {
       type: String,
       enum: ["Student", "AdvisorAdmin", "SuperAdmin", "Recruiter"],
       default: "Student",
     },
+
     status: {
       type: String,
       enum: ["pending", "approved", "rejected"],
-      default: "pending", // ทุกคนต้องรออนุมัติ
+      default: "pending",
     },
-    studentCardUrl: {
-      type: String, // เก็บ path รูปบัตร นศ.
-    },
-    employeeCardUrl: {
-      type: String, // เก็บ path รูปบัตรพนักงาน (recruiter)
-    },
+
+    studentCardUrl: String,
+    employeeCardUrl: String,
+
     provider: {
       type: String,
       enum: ["local", "google"],
       default: "local",
     },
+
+    /* ✅ NEW fields for profile */
+    bio: String,
+    contactEmail: String,
+    phone: String,
+    profileImageUrl: String,
+    socialLinks: {
+      linkedin: String,
+      github: String,
+      facebook: String,
+      website: String,
+    },
+
+    /* ✅ NEW fields for reset password */
+    resetPasswordToken: String,
+    resetPasswordExpires: Date,
   },
   { timestamps: true }
 );
 
-const User = mongoose.model("User", userSchema);
-export default User;
+export default mongoose.model("User", userSchema);

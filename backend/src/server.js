@@ -7,17 +7,23 @@ import userRoutes from "./routes/user.js";
 import portfolioRoutes from "./routes/portfolio.js";
 import path from "path";
 import { fileURLToPath } from "url";
+import cors from "cors"; 
 
-// โหลดตัวแปรจาก .env
 dotenv.config();
-
-// ต่อ MongoDB
 await connectDB();
 
 const app = express();
 app.use(express.json());
 
-// ให้เสิร์ฟไฟล์ที่อัปโหลดได้ เช่น /uploads/abc.png
+// อนุญาตให้ frontend ติดต่อ backend ได้
+app.use(
+  cors({
+    origin: "http://localhost:5000", // frontend vite port
+    credentials: true,
+  })
+);
+
+// ให้เสิร์ฟไฟล์ในโฟลเดอร์ uploads
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 app.use("/uploads", express.static(path.join(__dirname, "..", "uploads")));
@@ -33,10 +39,13 @@ app.get("/", (req, res) => {
   res.send("StudentPort API is running 🚀");
 });
 
-// ใช้พอร์ตจาก .env ถ้าไม่มีให้ใช้ 3000
 const PORT = process.env.PORT || 3000;
-
-// ให้ฟังทุก interface (สำคัญเวลาใช้บน VM/Docker)
 app.listen(PORT, "0.0.0.0", () => {
-  console.log(`✅ Server running on http://127.0.0.1:${PORT}`);
+  console.log(`Server running on http://127.0.0.1:${PORT}`);
 });
+
+import portfolioRoutesV2 from "./routes/portfolio.v2.js";
+app.use("/api/portfolio", portfolioRoutesV2);
+
+import userRoutesV2 from "./routes/user.v2.js";
+app.use("/api/user", userRoutesV2);
