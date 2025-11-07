@@ -47,26 +47,6 @@ router.get("/mine", auth, async (req, res) => {
 });
 
 /**
- * GET /api/portfolio/public
- * ดูเฉพาะ public
- */
-router.get("/public", async (req, res) => {
-  try {
-    const list = await Portfolio.find({
-      visibility: "public",
-      status: { $ne: "rejected" },
-    })
-      .populate("owner", "displayName email role")
-      .sort({ createdAt: -1 });
-
-    return res.json(list);
-  } catch (err) {
-    console.error("Get public portfolio error:", err);
-    return res.status(500).json({ message: "Server error" });
-  }
-});
-
-/**
  * PUT /api/portfolio/:id/visibility
  * เจ้าของเปลี่ยน public/private ได้
  */
@@ -83,6 +63,11 @@ router.put("/:id/visibility", auth, async (req, res) => {
 
     if (portfolio.owner.toString() !== req.user.id) {
       return res.status(403).json({ message: "You cannot change this portfolio" });
+    }
+
+    // ✅ เพิ่ม
+    if (visibility === "public" && portfolio.statusV2 !== "Approved") {
+      return res.status(400).json({ message: "Only Approved portfolios can be set to public" });
     }
 
     portfolio.visibility = visibility;

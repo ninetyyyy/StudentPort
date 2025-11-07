@@ -47,7 +47,3 @@ PortfolioSchema.index({ visibility: 1, statusV2: 1, yearOfProject: 1, category: 
 const Portfolio = mongoose.model("Portfolio", PortfolioSchema);
 export default Portfolio;
 
-
-
-
-

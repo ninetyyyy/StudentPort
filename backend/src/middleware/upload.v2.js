@@ -37,4 +37,3 @@ const uploader = multer({
 
 // ใช้ fields เพื่อรองรับ multiple files (สูงสุด 10)
 export const uploadPortfolioV2 = uploader.fields([{ name: "images", maxCount: 10 }]);
-

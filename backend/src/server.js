@@ -26,7 +26,8 @@ app.use(
 // ให้เสิร์ฟไฟล์ในโฟลเดอร์ uploads
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-app.use("/uploads", express.static(path.join(__dirname, "..", "uploads")));
+// เสิร์ฟไฟล์จาก src/uploads (เพราะตัวอัปโหลด v2 เซฟไว้ใต้ src/uploads)
+app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
 // routes หลัก
 app.use("/auth", authRoutes);
