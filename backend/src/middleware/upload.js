@@ -20,4 +20,17 @@ const storage = multer.diskStorage({
   },
 });
 
-export const upload = multer({ storage });
+export const upload = multer({
+  storage,
+  limits: {
+  fileSize: 10 * 1024 * 1024, // 10MB
+  files: 10,                  // ✅ สูงสุด 10 ไฟล์
+  },
+  fileFilter: (req, file, cb) => {
+    const allowed = ["application/pdf", "image/jpeg", "image/png"];
+    if (!allowed.includes(file.mimetype)) {
+      return cb(new Error("Only PDF, JPG, PNG allowed"));
+    }
+    cb(null, true);
+  },
+});

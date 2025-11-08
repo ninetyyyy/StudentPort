@@ -1,4 +1,3 @@
-// src/models/Portfolio.js
 import mongoose from "mongoose";
 
 const PortfolioSchema = new mongoose.Schema(
@@ -8,11 +7,11 @@ const PortfolioSchema = new mongoose.Schema(
       ref: "User",
       required: true,
     },
+
     title: { type: String, required: true },
     desc: { type: String },
     fileUrl: { type: String },
 
-    // ฟิลด์กำหนดสิทธิ์การมองเห็น
     visibility: {
       type: String,
       enum: ["public", "private"],
@@ -21,9 +20,46 @@ const PortfolioSchema = new mongoose.Schema(
 
     status: {
       type: String,
-      enum: ["submitted", "approved", "rejected"],
-      default: "submitted",
+      enum: ["draft", "pending", "in_process", "approved", "rejected"],
+      default: "draft",
     },
+
+    university: {
+      type: String,
+      required: true,
+    },
+    year: {
+      type: Number,
+      required: true,
+      min: 2020
+    },
+
+    category: {
+      type: String,
+      required: true,
+      enum: [
+        "AI","ML","BI","QA","UX/UI","Database","Software Engineering",
+        "IOT","Gaming","Web Development","Coding","Data Science",
+        "Hackathon","Bigdata","Data Analytics",
+       ]
+    },
+
+    files: [
+      {
+        type: String, // path ของ PDF / JPG / PNG
+      }
+    ],
+    comments: [
+      {
+        user: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
+        role: { type: String, required: true },      // ✅ เก็บ role ของคนเมนต์
+        text: { type: String, required: true },
+        createdAt: { type: Date, default: Date.now },
+      }
+    ],
+
+
+
   },
   { timestamps: true }
 );

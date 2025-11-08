@@ -13,7 +13,7 @@ router.get("/", auth, async (req, res) => {
 router.get(
   "/pending",
   auth,
-  allowRoles("AdvisorAdmin", "SuperAdmin"),
+  allowRoles("SuperAdmin"),
   async (req, res) => {
     const users = await User.find({ status: "pending" }).select("-password");
     return res.json(users);
@@ -41,7 +41,7 @@ router.get(
 router.put(
   "/:id/approve",
   auth,
-  allowRoles("AdvisorAdmin", "SuperAdmin"),
+  allowRoles("SuperAdmin"),
   async (req, res) => {
     const user = await User.findByIdAndUpdate(
       req.params.id,
@@ -57,7 +57,7 @@ router.put(
 router.delete(
   "/:id/reject",
   auth,
-  allowRoles("AdvisorAdmin", "SuperAdmin"),
+  allowRoles("SuperAdmin"),
   async (req, res) => {
     try {
       const user = await User.findByIdAndDelete(req.params.id);

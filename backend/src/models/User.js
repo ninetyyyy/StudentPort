@@ -17,6 +17,13 @@ const userSchema = new mongoose.Schema(
       type: String,
       required: true,
     },
+    university: {
+      type: String,
+      required: function () {
+        return this.role === "Student";
+      },
+    },
+
     role: {
       type: String,
       enum: ["Student", "AdvisorAdmin", "SuperAdmin", "Recruiter"],

@@ -24,15 +24,24 @@ router.post(
     try {
       // 1) ถ้าเป็น form-data → req.body จะมาจาก multer
       // 2) ถ้าเป็น JSON → req.body จะมาจาก express.json()
-      const { email, password, displayName, role } = req.body || {};
+      const { email, password, displayName, role, university  } = req.body || {};
+      // console.log("Register body:", req.body)
+
+
+      // ✅ ไม่ให้กำหนด role เอง
+      const allowedRoles = ["Student", "Recruiter"];
+      if (!allowedRoles.includes(role)) {
+        return res.status(400).json({ message: "Invalid role" });
+      }
+const finalRole = role;
 
       // กันกรณี req.body หายไปเลย
-      if (!email || !password) {
-        return res
-          .status(400)
-          .json({ message: "email and password are required" });
+      if (!email ) return res.status(400).json({ message: "email required" });
+      if (!password ) return res.status(400).json({ message: "password required" });
+      // ✅ Student ต้องกรอก university
+      if (role === "Student" && !university) {
+          return res.status(400).json({ message: "university is required for Student" });
       }
-
       // กันอีเมลซ้ำ
       const exists = await User.findOne({ email });
       if (exists) {
@@ -81,7 +90,8 @@ router.post(
         email,
         password: hashed,
         displayName,
-        role: role || "Student",
+        university,
+        role: finalRole,
         studentCardUrl: studentCardFile ? studentCardFile.path : undefined,
         employeeCardUrl: employeeCardFile ? employeeCardFile.path : undefined,
         status: "pending", // ต้องรอ approve
@@ -99,7 +109,7 @@ router.post(
       });
     } catch (err) {
       console.error("Register error:", err);
-      return res.status(500).json({ message: "Server error" });
+      res.status(500).json({ message: "Server error" });
     }
   }
 );
