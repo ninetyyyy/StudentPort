@@ -97,13 +97,13 @@ router.get("/mine", auth, async (req, res) => {
 // ✅ Get portfolio detail + comments
 router.get("/detail/:id", auth, async (req, res) => {
   try {
-    const list = await Portfolio.findById(req.params.id)
+    const p = await Portfolio.findById(req.params.id)
       .populate("owner", "displayName email role")
       .populate("comments.user", "displayName email role");  // ✅ ดึงชื่อผู้เมนต์
 
     if (!p) return res.status(404).json({ message: "Portfolio not found" });
 
-    return res.status(200).json(list);
+    return res.status(200).json(ย);
   } catch (err) {
     console.error("Get detail error:", err);
     return res.status(500).json({ message: "Server error" });
@@ -193,7 +193,7 @@ router.get(
 );
 
 router.get(
-  "/inProcress",
+  "/inProcess",
   auth,
   allowRoles("SuperAdmin"),
   async (req, res) => {
@@ -216,7 +216,7 @@ router.get(
  * อนุมัติพอร์ต
  */
 router.put(
-  "admin/:id/approve",
+  "/admin/:id/approve",
   auth,
   allowRoles("AdvisorAdmin"),
   async (req, res) => {
@@ -254,7 +254,7 @@ router.put(
 );
 
 router.put(
-  "super/:id/approve",
+  "/super/:id/approve",
   auth,
   allowRoles("SuperAdmin"),
   async (req, res) => {
@@ -304,8 +304,14 @@ router.put(
     try {
       const p = await Portfolio.findById(req.params.id);
       if (!p) return res.status(404).json({ message: "Portfolio not found" });
+//รอแก้แปป
+      if (p.status !== "pending" ) {
+        return res.status(400).json({
+          message: "Only pending portfolios can be rejected",
+        });
+      }
 
-      if (p.status !== "pending") {
+      if (p.status !== "in_process") {
         return res.status(400).json({
           message: "Only pending portfolios can be rejected",
         });
@@ -344,9 +350,84 @@ router.put(
   }
 );
 
+// ✅ EDIT portfolio (แก้ draft / rejected)
+// ถ้าแก้เสร็จแล้ว → กลับไป pending อีกครั้ง
+router.put("/:id/edit", auth, upload.array("portfolioFiles", 10), async (req, res) => {
+  try {
+    const p = await Portfolio.findById(req.params.id);
+
+    if (!p) return res.status(404).json({ message: "Portfolio not found" });
+
+    // ✅ อนุญาตแก้เฉพาะเจ้าของ
+    if (p.owner.toString() !== req.user.id) {
+      return res.status(403).json({ message: "You cannot edit this portfolio" });
+    }
+
+    // ✅ แก้ได้เฉพาะ draft หรือ rejected
+    if (!["draft", "rejected"].includes(p.status)) {
+      return res.status(400).json({ message: "Only draft or rejected portfolios can be edited" });
+    }
+
+    // ✅ อัปเดต text fields ถ้าส่งมา
+    const { title, university, year, category, desc } = req.body;
+    if (title) p.title = title;
+    if (university) p.university = university;
+    // ✅ validate year
+    if (year) {
+      const yearNum = Number(year);
+      if (isNaN(yearNum) || yearNum < 2020 || yearNum > 2025) {
+        return res.status(400).json({ message: "Year must be between 2020-2025" });
+      }
+      p.year = yearNum;
+    }
+    // ✅ validate category
+    if (category) {
+      const allowedCategories = [
+        "AI","ML","BI","QA","UX/UI","Database","Software Engineering",
+        "IOT","Gaming","Web Development","Coding","Data Science",
+        "Hackathon","Bigdata","Data Analytics",
+    ];
+      if (!allowedCategories.includes(category)) {
+        return res.status(400).json({ message: "Invalid category" });
+      }
+      p.category = category;
+    }
+
+    if (desc) p.desc = desc;
+
+    // ✅ ถ้ามีไฟล์ใหม่ → แทนที่ไฟล์เก่า
+    if (req.files && req.files.length > 0) {
+      p.files = req.files.map((f) => f.path);
+    }
+
+    // ✅ ต้องมีไฟล์อย่างน้อย 1
+    if (!p.files || p.files.length === 0) {
+      return res.status(400).json({
+        message: "Portfolio must have at least 1 file (PDF, JPG, PNG ≤ 10MB)",
+      });
+    }
+
+
+    // ✅ หลังแก้เสร็จ → กลับไป pending อีกรอบ
+    p.status = "pending";
+    p.feedback = undefined; // feedback เดิมทิ้งไป เพราะกำลังส่งตรวจใหม่
+
+    await p.save();
+
+    return res.json({
+      message: "✅ Portfolio updated & resubmitted",
+      portfolio: p,
+    });
+
+  } catch (err) {
+    console.error("Edit portfolio error:", err);
+    return res.status(500).json({ message: "Server error" });
+  }
+});
+
 // GET /api/portfolio/:id
 // Admin หรือ AdvisorAdmin เอาไว้เปิดพอร์ตชิ้นเดียวเต็มๆ
-router.get("/:id", auth, allowRoles("AdvisorAdmin", "SuperAdmin"), async (req, res) => {
+router.get("/admin-view/:id", auth, allowRoles("AdvisorAdmin", "SuperAdmin"), async (req, res) => {
   try {
     const p = await Portfolio.findById(req.params.id)
       .populate("owner", "displayName email university role");
