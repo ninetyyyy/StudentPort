@@ -42,8 +42,9 @@ const PortfolioSchema = new mongoose.Schema(
         "IOT","Gaming","Web Development","Coding","Data Science",
         "Hackathon","Bigdata","Data Analytics",
        ]
+    },cover_img: {
+      type: String,
     },
-
     files: [
       {
         type: String, // path ของ PDF / JPG / PNG
