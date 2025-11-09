@@ -53,6 +53,38 @@ router.put(
   }
 );
 
+// GET /api/user/admin-view/:id → SuperAdmin ดูรายละเอียด user แบบเต็ม
+router.get(
+  "/admin-view/:id",
+  auth,
+  allowRoles("SuperAdmin"), // ✅ เหลือ SuperAdmin เท่านั้น
+  async (req, res) => {
+    try {
+      const user = await User.findById(req.params.id).select("-password");
+      if (!user) return res.status(404).json({ message: "User not found" });
+
+      // ✅ แปลงเป็น URL ให้ frontend เปิดดูรูปได้เลย
+      if (user.studentCardUrl) {
+        user.studentCardUrl = `${req.protocol}://${req.get("host")}/${user.studentCardUrl}`;
+      }
+
+      if (user.employeeCardUrl) {
+        user.employeeCardUrl = `${req.protocol}://${req.get("host")}/${user.employeeCardUrl}`;
+      }
+
+      return res.json({
+        message: "User detail fetched",
+        user
+      });
+    } catch (err) {
+      console.error("Admin user detail error:", err);
+      return res.status(500).json({ message: "Server error" });
+    }
+  }
+);
+
+
+
 // DELETE /api/user/:id/reject → ลบผู้ใช้ที่ไม่ผ่านการอนุมัติ
 router.delete(
   "/:id/reject",

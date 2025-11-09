@@ -57,7 +57,18 @@ const PortfolioSchema = new mongoose.Schema(
         createdAt: { type: Date, default: Date.now },
       }
     ],
-
+    // ✅ ✅ ✅ เพิ่มตรงนี้
+    feedback: {
+      type: String, // เก็บเหตุผล reject
+    },
+    reviewedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+    },
+    reviewedAt: {
+      type: Date,
+    },
+  
 
 
   },

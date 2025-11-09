@@ -325,69 +325,7 @@ router.put(
   }
 );
 
-/**
- * PUT /api/portfolio/:id/reject
- * ปฏิเสธพอร์ต + เหตุผล (feedback บังคับ)
- */
-router.put(
-  "/:id/reject",
-  auth,
-  allowRoles("AdvisorAdmin", "SuperAdmin"),
-  async (req, res) => {
-    try {
-      const p = await Portfolio.findById(req.params.id);
-      if (!p) return res.status(404).json({ message: "Portfolio not found" });
-      //รอแก้แปป
-      //if (p.status !== "pending" ) {
-      //return res.status(400).json({
-      //message: "Only pending portfolios can be rejected",
-      //   });
-      // }
 
-      //if (p.status !== "in_process") {
-      //return res.status(400).json({
-      //message: "Only pending portfolios can be rejected",
-      //   });
-      //}
-      // ✅ ให้ reject ได้ทั้ง pending และ in_process
-      if (!["pending", "in_process"].includes(p.status)) {
-        return res.status(400).json({
-          message: "Only pending or in_process portfolios can be rejected",
-        });
-      }
-
-      // ✅ feedback บังคับ
-      // ✅ feedback บังคับ + ป้องกัน crash ถ้า req.body ไม่มี
-      if (!req.body || !req.body.feedback) {
-        return res.status(400).json({
-          message: "Feedback is required when rejecting portfolio",
-        });
-      }
-
-      p.status = "rejected";
-      p.feedback = req.body.feedback;
-      p.reviewedBy = req.user.id;
-      p.reviewedAt = new Date();
-      await p.save();
-
-      return res.json({
-        message: "❌ Portfolio rejected",
-        portfolio: {
-          status: p.status, // ✅ REJECTED
-          feedback: p.feedback, // ✅ เหตุผล
-          title: p.title,
-          university: p.university,
-          year: p.year,
-          files: p.files, // ✅ attach ไฟล์
-          desc: p.desc, // ✅ Description
-        },
-      });
-    } catch (err) {
-      console.error("Reject portfolio error:", err);
-      return res.status(500).json({ message: "Server error" });
-    }
-  }
-);
 
 // ✅ EDIT portfolio (แก้ draft / rejected)
 // ถ้าแก้เสร็จแล้ว → กลับไป pending อีกครั้ง
