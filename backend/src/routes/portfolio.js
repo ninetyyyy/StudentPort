@@ -131,6 +131,7 @@ router.get("/public", async (req, res) => {
       .populate("owner", "displayName email role")
       .sort({ createdAt: -1 });
 
+    console.log(list)
     return res.json(list);
   } catch (err) {
     console.error("Get public portfolio error:", err);

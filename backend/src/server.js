@@ -25,6 +25,8 @@ app.use(express.json());
 //   // })
 // );
 
+app.use(cors());
+
 // ให้เสิร์ฟไฟล์ในโฟลเดอร์ uploads
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
