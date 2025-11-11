@@ -508,12 +508,19 @@ router.put(
         }`;
       }
 
-      // ✅ ถ้ามีไฟล์ portfolioFiles ใหม่ → เพิ่มเข้าไปต่อท้าย
+      // ✅ ถ้ามี portfolioFiles ใหม่ ส่งมา → ถือว่าแทนทั้งหมด
       if (req.files?.portfolioFiles && req.files.portfolioFiles.length > 0) {
         const newFiles = req.files.portfolioFiles.map(
           (f) => `${req.protocol}://${req.get("host")}/${f.path}`
         );
-        p.files = [...p.files, ...newFiles]; // ✅ append เพิ่มเข้าไป ไม่ลบทิ้งของเดิม
+
+        const oldFiles = p.files;
+
+        // ✅ หาไฟล์ที่ user ไม่ส่งกลับมา → ถือว่าถูกลบ
+        const removedFiles = oldFiles.filter((f) => !newFiles.includes(f));
+
+        // ✅ เก็บไฟล์ใหม่ทั้งหมดแทน
+        p.files = newFiles;
       }
 
       // ✅ ต้องมีไฟล์อย่างน้อย 1
@@ -603,47 +610,6 @@ router.post("/:id/comment", auth, async (req, res) => {
   }
 });
 
-// ✅ REMOVE specific file from portfolio
-router.patch("/:id/files/remove", auth, async (req, res) => {
-  try {
-    const { fileUrl } = req.body;
 
-    if (!fileUrl) {
-      return res.status(400).json({ message: "fileUrl is required" });
-    }
-
-    const p = await Portfolio.findById(req.params.id);
-
-    if (!p) return res.status(404).json({ message: "Portfolio not found" });
-
-    // ✅ อนุญาตเฉพาะเจ้าของแก้ไฟล์
-    if (p.owner.toString() !== req.user.id) {
-      return res.status(403).json({
-        message: "You cannot modify files in this portfolio",
-      });
-    }
-
-    // ✅ remove only that file
-    const updatedFiles = p.files.filter((f) => f !== fileUrl);
-
-    // ❌ จะไม่ยอมให้เหลือ 0 ไฟล์
-    if (updatedFiles.length === 0) {
-      return res.status(400).json({
-        message: "You must keep at least 1 file in the portfolio",
-      });
-    }
-
-    p.files = updatedFiles;
-    await p.save();
-
-    return res.json({
-      message: "✅ File removed",
-      files: p.files,
-    });
-  } catch (err) {
-    console.error("Remove file error:", err);
-    return res.status(500).json({ message: "Server error" });
-  }
-});
 
 export default router;
