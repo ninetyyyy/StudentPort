@@ -3,6 +3,7 @@ import express from "express";
 import { auth, allowRoles } from "../middleware/auth.js";
 import Portfolio from "../models/Portfolio.js";
 import { upload } from "../middleware/upload.js";
+import multer from "multer";
 
 const router = express.Router();
 
@@ -112,10 +113,20 @@ router.post(
       }
 
       // ✅ optional other
-      const coverImgUrl = `${req.protocol}://${req.get("host")}/${req.files.cover_img[0].path}`;
+      const coverImgUrl = `${req.protocol}://${req.get("host")}/${
+        req.files.cover_img[0].path
+      }`;
       const otherUrls = req.files.portfolioFiles
-        ? req.files.portfolioFiles.map((f) => `${req.protocol}://${req.get("host")}/${f.path}`)
+        ? req.files.portfolioFiles.map(
+            (f) => `${req.protocol}://${req.get("host")}/${f.path}`
+          )
         : [];
+      // ✅ ต้องมี portfolioFiles อย่างน้อย 1 ไฟล์
+      if (!req.files?.portfolioFiles || req.files.portfolioFiles.length === 0) {
+        return res.status(400).json({
+          message: "At least 1 portfolio file is required (PDF/JPG/PNG ≤ 10MB)",
+        });
+      }
 
       // ✅ ตรวจปี
       const yearNum = Number(year);
@@ -127,9 +138,21 @@ router.post(
 
       // ✅ หมวดหมู่
       const allowedCategories = [
-        "AI","ML","BI","QA","UX/UI","Database","Software Engineering",
-        "IOT","Gaming","Web Development","Coding","Data Science",
-        "Hackathon","Bigdata","Data Analytics",
+        "AI",
+        "ML",
+        "BI",
+        "QA",
+        "UX/UI",
+        "Database",
+        "Software Engineering",
+        "IOT",
+        "Gaming",
+        "Web Development",
+        "Coding",
+        "Data Science",
+        "Hackathon",
+        "Bigdata",
+        "Data Analytics",
       ];
       if (!allowedCategories.includes(category)) {
         return res.status(400).json({ message: "Invalid category" });
@@ -156,7 +179,6 @@ router.post(
         message: "✅ Portfolio created",
         data: portfolio,
       });
-
     } catch (err) {
       console.error("Create portfolio error:", err);
 
@@ -213,7 +235,7 @@ router.get("/public", async (req, res) => {
       .populate("owner", "displayName email role")
       .sort({ createdAt: -1 });
 
-    console.log(list)
+    console.log(list);
     return res.json(list);
   } catch (err) {
     console.error("Get public portfolio error:", err);
@@ -303,7 +325,7 @@ router.put(
     try {
       const { id, isApprove } = req.params;
       const approve = isApprove === "true";
-      
+
       const p = await Portfolio.findById(id);
       if (!p) return res.status(404).json({ message: "Portfolio not found" });
 
@@ -329,7 +351,7 @@ router.put(
 
       // ✅ Apply result
       if (approve) {
-        p.status = "in_process";  // ส่งต่อไป super admin
+        p.status = "in_process"; // ส่งต่อไป super admin
       } else {
         p.status = "rejected";
         p.feedback = req.body.feedback;
@@ -408,14 +430,16 @@ router.put(
   }
 );
 
-
-
 // ✅ EDIT portfolio (แก้ draft / rejected)
 // ถ้าแก้เสร็จแล้ว → กลับไป pending อีกครั้ง
 router.put(
   "/:id/edit",
   auth,
-  upload.array("portfolioFiles", 10),
+  upload.fields([
+    { name: "cover_img", maxCount: 1 },
+    { name: "portfolioFiles", maxCount: 10 },
+  ]),
+
   async (req, res) => {
     try {
       const p = await Portfolio.findById(req.params.id);
@@ -477,9 +501,19 @@ router.put(
 
       if (desc) p.desc = desc;
 
-      // ✅ ถ้ามีไฟล์ใหม่ → แทนที่ไฟล์เก่า
-      if (req.files && req.files.length > 0) {
-        p.files = req.files.map((f) => f.path);
+      // ✅ ถ้ามี cover_img ใหม่ → อัปเดต
+      if (req.files?.cover_img) {
+        p.cover_img = `${req.protocol}://${req.get("host")}/${
+          req.files.cover_img[0].path
+        }`;
+      }
+
+      // ✅ ถ้ามีไฟล์ portfolioFiles ใหม่ → เพิ่มเข้าไปต่อท้าย
+      if (req.files?.portfolioFiles && req.files.portfolioFiles.length > 0) {
+        const newFiles = req.files.portfolioFiles.map(
+          (f) => `${req.protocol}://${req.get("host")}/${f.path}`
+        );
+        p.files = [...p.files, ...newFiles]; // ✅ append เพิ่มเข้าไป ไม่ลบทิ้งของเดิม
       }
 
       // ✅ ต้องมีไฟล์อย่างน้อย 1
@@ -489,18 +523,32 @@ router.put(
         });
       }
 
-      // ✅ หลังแก้เสร็จ → กลับไป pending อีกรอบ
-      p.status = "pending";
-      p.feedback = undefined; // feedback เดิมทิ้งไป เพราะกำลังส่งตรวจใหม่
+      // ✅ หลังแก้เสร็จ → ถ้า saveDraft = true → บันทึกเป็น draft
+      if (req.body.saveDraft === "true") {
+        p.status = "draft";
+      } else {
+        p.status = "pending";
+      }
+
+      // ✅ reset feedback
+      p.feedback = undefined;
 
       await p.save();
 
       return res.json({
-        message: "✅ Portfolio updated & resubmitted",
+        message:
+          req.body.saveDraft === "true"
+            ? "✅ Draft updated"
+            : "✅ Portfolio updated & resubmitted",
         portfolio: p,
       });
     } catch (err) {
       console.error("Edit portfolio error:", err);
+
+      if (err instanceof multer.MulterError) {
+        return res.status(400).json({ message: err.message });
+      }
+
       return res.status(500).json({ message: "Server error" });
     }
   }
@@ -551,6 +599,49 @@ router.post("/:id/comment", auth, async (req, res) => {
     return res.json({ message: "✅ Comment added", comments: p.comments });
   } catch (err) {
     console.error("Add comment error:", err);
+    return res.status(500).json({ message: "Server error" });
+  }
+});
+
+// ✅ REMOVE specific file from portfolio
+router.patch("/:id/files/remove", auth, async (req, res) => {
+  try {
+    const { fileUrl } = req.body;
+
+    if (!fileUrl) {
+      return res.status(400).json({ message: "fileUrl is required" });
+    }
+
+    const p = await Portfolio.findById(req.params.id);
+
+    if (!p) return res.status(404).json({ message: "Portfolio not found" });
+
+    // ✅ อนุญาตเฉพาะเจ้าของแก้ไฟล์
+    if (p.owner.toString() !== req.user.id) {
+      return res.status(403).json({
+        message: "You cannot modify files in this portfolio",
+      });
+    }
+
+    // ✅ remove only that file
+    const updatedFiles = p.files.filter((f) => f !== fileUrl);
+
+    // ❌ จะไม่ยอมให้เหลือ 0 ไฟล์
+    if (updatedFiles.length === 0) {
+      return res.status(400).json({
+        message: "You must keep at least 1 file in the portfolio",
+      });
+    }
+
+    p.files = updatedFiles;
+    await p.save();
+
+    return res.json({
+      message: "✅ File removed",
+      files: p.files,
+    });
+  } catch (err) {
+    console.error("Remove file error:", err);
     return res.status(500).json({ message: "Server error" });
   }
 });

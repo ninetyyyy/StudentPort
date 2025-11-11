@@ -79,7 +79,7 @@ router.get(
     } catch (err) {
       console.error("Admin user detail error:", err);
       return res.status(500).json({ message: "Server error" });
-    }
+    } 
   }
 );
 
